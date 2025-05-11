@@ -1,8 +1,12 @@
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QToolBar, QMainWindow, QComboBox, QTableView, QLabel, QFileDialog,QPushButton
 from PySide6.QtGui import QAction
+from PySide6.QtCore import QAbstractTableModel
+import pandas as pd
 import sys
 class Window(QMainWindow):
     def __init__(self):
+        def setSpreadSheetData():
+            spreadsheet.setModel(self.openFileExplorer())
         super().__init__()
         self.setWindowTitle("Excel")
         self.setGeometry(900,500,900,500)
@@ -31,9 +35,14 @@ class Window(QMainWindow):
         widget.setLayout(layout)
         self.setCentralWidget(widget)
     def openFileExplorer(self):
-        fileExplorer = QFileDialog.getOpenFileName(self)
-        print(fileExplorer)
-
+        fileExplorer = QFileDialog.getOpenFileName(self,"Open an Excel File")
+        file = pd.read_excel(fileExplorer[0])
+        # return file
+        print(file)
+class dataModel(QAbstractTableModel):
+    def __init__(self,data):
+        self.data = data
+    def data
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
