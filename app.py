@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QToolBar, QMainWindow, QComboBox, QTableView, QLabel, QFileDialog,QPushButton
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QToolBar, QMainWindow, QComboBox, QTableView, QLabel, QFileDialog,QPushButton, QMessageBox
 from PySide6.QtGui import QAction
 from PySide6.QtCore import QAbstractTableModel, Qt
 import pandas as pd
@@ -9,6 +9,7 @@ class Window(QMainWindow):
             self.model = TableModel(self.openFileExplorer())
             spreadsheet.setModel(self.model)
         def saveSpreadSheetData():
+            print(self.model.getData())
             with pd.ExcelWriter(self.saveFileExplorer()) as writer:
                 self.model.getData().to_excel(writer)
         super().__init__()
@@ -38,11 +39,20 @@ class Window(QMainWindow):
         self.setCentralWidget(widget)
     def openFileExplorer(self):
         fileExplorer = QFileDialog.getOpenFileName(self,"Open an Excel File","","","Excel files (*.xlsx)")
-        file = pd.read_excel(fileExplorer[0])
-        return file
+        if fileExplorer[0].split(".")[1]=="xlsx":
+            file = pd.read_excel(fileExplorer[0])
+            return file
+        else:
+            message = QMessageBox(self,"Error","Nieprawdłowy rodzaj pliku")
+            message.setText("Nieprawidłowy rodzaj pliku")
+            message.show()
+            return None
     def saveFileExplorer(self):
         fileExplorer = QFileDialog.getSaveFileName(self,"Save Excel file","","","Excel files (*.xlsx)")
-        return fileExplorer[0]+".xlsx"
+        if fileExplorer[0][-5:len(fileExplorer[0])]==".xlsx":
+            return fileExplorer[0]
+        else:
+            return fileExplorer[0] + ".xlsx"
 class TableModel(QAbstractTableModel):
     def __init__(self, data):
         super().__init__()
@@ -51,10 +61,11 @@ class TableModel(QAbstractTableModel):
         data = []
         headers = []
         if len(self._data) > 0:
-            for x in range(self.rowCount(0)):
-                for y in range(self.columnCount(0)):
+            for x in range(0,self.rowCount(0)):
+                for y in range(0,self.columnCount(0)):
                     data.append(self._data.iloc[x, y])
                     headers.append(self._data.columns[y])
+            print(data)
             return pd.DataFrame([data], columns=headers)
         return None
 
