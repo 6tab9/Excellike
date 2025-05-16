@@ -6,20 +6,21 @@ import sys
 class Window(QMainWindow):
     def __init__(self):
         def setSpreadSheetData():
-            model = TableModel(self.openFileExplorer())
-            spreadsheet.setModel(model)
+            self.model = TableModel(self.openFileExplorer())
+            spreadsheet.setModel(self.model)
+        def saveSpreadSheetData():
+            with pd.ExcelWriter(self.saveFileExplorer()) as writer:
+                self.model.getData().to_excel(writer)
         super().__init__()
         self.setWindowTitle("Excel")
+        self.model = TableModel(self)
         self.setGeometry(900,500,900,500)
         layout = QVBoxLayout()
         widget = QWidget()
-
-
-
         openButton = QAction("open",self)
         openButton.triggered.connect(setSpreadSheetData)
         saveButton = QAction("save as",self)
-
+        saveButton.triggered.connect(saveSpreadSheetData)
         menu = self.menuBar()
 
         fileMenu = menu.addMenu("File")
@@ -36,15 +37,26 @@ class Window(QMainWindow):
         widget.setLayout(layout)
         self.setCentralWidget(widget)
     def openFileExplorer(self):
-        fileExplorer = QFileDialog.getOpenFileName(self,"Open an Excel File")
+        fileExplorer = QFileDialog.getOpenFileName(self,"Open an Excel File","","","Excel files (*.xlsx)")
         file = pd.read_excel(fileExplorer[0])
-        print(file)
         return file
+    def saveFileExplorer(self):
+        fileExplorer = QFileDialog.getSaveFileName(self,"Save Excel file","","","Excel files (*.xlsx)")
+        return fileExplorer[0]+".xlsx"
 class TableModel(QAbstractTableModel):
-
     def __init__(self, data):
         super().__init__()
         self._data = data
+    def getData(self):
+        data = []
+        headers = []
+        if len(self._data) > 0:
+            for x in range(self.rowCount(0)):
+                for y in range(self.columnCount(0)):
+                    data.append(self._data.iloc[x, y])
+                    headers.append(self._data.columns[y])
+            return pd.DataFrame([data], columns=headers)
+        return None
 
     def data(self, index, role):
         if role == Qt.DisplayRole:
@@ -66,14 +78,15 @@ class TableModel(QAbstractTableModel):
             if orientation == Qt.Vertical:
                 return str(self._data.index[section])
 
-    # def rowCount(self, index):
-    #     # The length of the outer list.
-    #     return len(self.data)
-    #
-    # def columnCount(self, index):
-    #     # The following takes the first sub-list, and returns
-    #     # the length (only works if all rows are an equal length)
-    #     return len(self.data[0])
+    def setData(self, index, value, role):
+        if role == Qt.EditRole:
+            self._data.iloc[index.row(), index.column()] = value
+            return True
+        return False
+
+    def flags(self, index):
+        return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
