@@ -3,6 +3,7 @@ from PySide6.QtGui import QAction
 from PySide6.QtCore import QAbstractTableModel, Qt
 import pandas as pd
 import sys
+from array import array
 class Window(QMainWindow):
     def __init__(self):
         def setSpreadSheetData():
@@ -11,11 +12,12 @@ class Window(QMainWindow):
         def saveSpreadSheetData():
             print(self.model.getData())
             with pd.ExcelWriter(self.saveFileExplorer()) as writer:
-                self.model.getData().to_excel(writer)
+                self.model.getData().to_excel(writer,index=False)
         super().__init__()
         self.setWindowTitle("Excel")
         self.model = TableModel(self)
         self.setGeometry(900,500,900,500)
+        self.columns = {}
         layout = QVBoxLayout()
         widget = QWidget()
         openButton = QAction("open",self)
@@ -23,7 +25,6 @@ class Window(QMainWindow):
         saveButton = QAction("save as",self)
         saveButton.triggered.connect(saveSpreadSheetData)
         menu = self.menuBar()
-
         fileMenu = menu.addMenu("File")
         fileMenu.addAction(openButton)
         fileMenu.addAction(saveButton)
@@ -41,6 +42,10 @@ class Window(QMainWindow):
         fileExplorer = QFileDialog.getOpenFileName(self,"Open an Excel File","","","Excel files (*.xlsx)")
         if fileExplorer[0].split(".")[1]=="xlsx":
             file = pd.read_excel(fileExplorer[0])
+            self.setWindowTitle(fileExplorer[0].split("/")[-1])
+            for (i,column) in enumerate(list(file.columns.values)):
+                self.columns.update({i:column})
+            print(self.columns)
             return file
         else:
             message = QMessageBox(self,"Error","Nieprawdłowy rodzaj pliku")
@@ -60,11 +65,13 @@ class TableModel(QAbstractTableModel):
     def getData(self):
         data = []
         headers = []
+        indexes = []
         if len(self._data) > 0:
             for x in range(0,self.rowCount(0)):
                 for y in range(0,self.columnCount(0)):
                     data.append(self._data.iloc[x, y])
                     headers.append(self._data.columns[y])
+                    indexes.append(self._data.index[x])
             print(data)
             return pd.DataFrame([data], columns=headers)
         return None
