@@ -79,18 +79,7 @@ class TableModel(QAbstractTableModel):
     def __init__(self, data):
         super().__init__()
         self._data = data
-    def getData(self):
-        data = []
-        headers = []
-        if len(self._data) > 0:
-            for x in range(0,self.rowCount(0)):
-                data.append([])
-                for y in range(0,self.columnCount(0)):
-                    data[x].append(self._data.iloc[x, y])
-            for z in range(0, self.columnCount(0)):
-                headers.append(self._data.columns[z])
-            return pd.DataFrame(data, columns=headers)
-        return None
+
 
     def data(self, index, role):
         if role == Qt.DisplayRole:
