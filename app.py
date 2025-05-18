@@ -6,14 +6,14 @@ import sys
 from array import array
 class Window(QMainWindow):
     def __init__(self):
-        def setSpreadSheetData():
-            self.model = TableModel(self.openFileExplorer())
-            spreadsheet.setModel(self.model)
         def saveSpreadSheetData():
-            print(self.model.getData())
+            keys = list(self.xlsxFile)
+            values = list(self.xlsxFile.values())
             with pd.ExcelWriter(self.saveFileExplorer()) as writer:
-                self.model.getData().to_excel(writer,index=False)
+                for (key,value) in enumerate(values):
+                    value.to_excel(writer,index=False,sheet_name=keys[key])
         super().__init__()
+        self.url = ""
         self.setWindowTitle("Excel")
         self.model = TableModel(self)
         self.setGeometry(900,500,900,500)
@@ -21,37 +21,54 @@ class Window(QMainWindow):
         layout = QVBoxLayout()
         widget = QWidget()
         openButton = QAction("open",self)
-        openButton.triggered.connect(setSpreadSheetData)
+        openButton.triggered.connect(self.openFileExplorer)
         saveButton = QAction("save as",self)
         saveButton.triggered.connect(saveSpreadSheetData)
-        menu = self.menuBar()
-        fileMenu = menu.addMenu("File")
+        self.menu = self.menuBar()
+        fileMenu = self.menu.addMenu("File")
+        self.sheetsMenu = self.menu.addMenu("Sheets")
         fileMenu.addAction(openButton)
         fileMenu.addAction(saveButton)
 
-        filterButton = menu.addAction("Filter")
-        helpButton = menu.addAction("Help")
+        filterButton = self.menu.addAction("Filter")
+        helpButton = self.menu.addAction("Help")
 
-        spreadsheet = QTableView(self)
-        spreadsheet.showGrid = True
-        layout.addWidget(spreadsheet)
+        self.spreadsheet = QTableView(self)
+        self.spreadsheet.showGrid = True
+        layout.addWidget(self.spreadsheet)
 
         widget.setLayout(layout)
         self.setCentralWidget(widget)
     def openFileExplorer(self):
         fileExplorer = QFileDialog.getOpenFileName(self,"Open an Excel File","","","Excel files (*.xlsx)")
         if fileExplorer[0].split(".")[1]=="xlsx":
-            file = pd.read_excel(fileExplorer[0])
-            self.setWindowTitle(fileExplorer[0].split("/")[-1])
-            for (i,column) in enumerate(list(file.columns.values)):
+            self.url = fileExplorer[0]
+            self.xlsxFile = pd.read_excel(self.url,sheet_name=None)
+            defaultFile = list(self.xlsxFile.values())[0]
+            self.setWindowTitle(f"{self.url.split("/")[-1]}")
+            self.columns = {}
+            for (i,column) in enumerate(list(defaultFile.columns.values)):
                 self.columns.update({i:column})
-            print(self.columns)
-            return file
+            self.sheetsMenu.clear()
+            if len(self.xlsxFile.keys())>1:
+                self.setWindowTitle(f"{self.url.split("/")[-1]} : {list(self.xlsxFile.keys())[0]}")
+                for (i,sheetName) in enumerate(self.xlsxFile.keys()):
+                    sheetAction = self.sheetsMenu.addAction(f"Open {sheetName}")
+                    sheetAction.triggered.connect(lambda state, x=i:self.openSheet(x))
+            self.model = TableModel(defaultFile)
+            self.spreadsheet.setModel(self.model)
         else:
             message = QMessageBox(self,"Error","Nieprawdłowy rodzaj pliku")
             message.setText("Nieprawidłowy rodzaj pliku")
             message.show()
-            return None
+    def openSheet(self,sheetID):
+        file = list(self.xlsxFile.values())[sheetID]
+        for (i, column) in enumerate(list(file.columns.values)):
+            self.columns = {}
+            self.columns.update({i: column})
+        self.model = TableModel(file)
+        self.spreadsheet.setModel(self.model)
+
     def saveFileExplorer(self):
         fileExplorer = QFileDialog.getSaveFileName(self,"Save Excel file","","","Excel files (*.xlsx)")
         if fileExplorer[0][-5:len(fileExplorer[0])]==".xlsx":
@@ -65,15 +82,14 @@ class TableModel(QAbstractTableModel):
     def getData(self):
         data = []
         headers = []
-        indexes = []
         if len(self._data) > 0:
             for x in range(0,self.rowCount(0)):
+                data.append([])
                 for y in range(0,self.columnCount(0)):
-                    data.append(self._data.iloc[x, y])
-                    headers.append(self._data.columns[y])
-                    indexes.append(self._data.index[x])
-            print(data)
-            return pd.DataFrame([data], columns=headers)
+                    data[x].append(self._data.iloc[x, y])
+            for z in range(0, self.columnCount(0)):
+                headers.append(self._data.columns[z])
+            return pd.DataFrame(data, columns=headers)
         return None
 
     def data(self, index, role):
