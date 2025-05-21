@@ -1,18 +1,78 @@
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QToolBar, QMainWindow, QComboBox, QTableView, QLabel, QFileDialog,QPushButton, QMessageBox
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QToolBar, QMainWindow, QComboBox, QTableView, QLabel, \
+    QFileDialog, QPushButton, QMessageBox, QLineEdit
 from PySide6.QtGui import QAction
 from PySide6.QtCore import QAbstractTableModel, Qt
 import pandas as pd
 import sys
-from array import array
+
+class FilterWindow(QWidget):
+    def __init__(self, xlsxFile,sheetID):
+        super().__init__()
+        self.keys = []
+        self.curSheet=list(xlsxFile.values())[sheetID]
+        for column in list(self.curSheet.columns.values):
+            self.keys.append(column)
+        self.setGeometry(300,300,300,300)
+        self.setWindowTitle("Filter")
+        self.layout = QVBoxLayout()
+        self.keySpinner = QComboBox()
+        for (i,key) in enumerate(self.keys):
+            self.keySpinner.addItem(key,i)
+        self.layout.addWidget(self.keySpinner)
+
+        self.actionSpinner = QComboBox()
+        self.actionSpinner.addItem("==")
+        self.actionSpinner.addItem(">")
+        self.actionSpinner.addItem("<")
+        self.actionSpinner.addItem("<=")
+        self.actionSpinner.addItem(">=")
+        self.actionSpinner.addItem("!=")
+        self.layout.addWidget(self.actionSpinner)
+
+        self.valuesEntry = QLineEdit()
+        self.layout.addWidget(self.valuesEntry)
+
+        self.confirmButton = QPushButton("Confirm")
+        self.confirmButton.pressed.connect(self.sendFilteredData)
+        self.layout.addWidget(self.confirmButton)
+
+        self.setLayout(self.layout)
+    def sendFilteredData(self):
+        filterData = []
+        for row in self.curSheet.values:
+            rowValue=row[self.keySpinner.currentIndex()]
+            value = int(self.valuesEntry.text())
+            #zaraz kurwa oszaleje 🗿
+            match self.actionSpinner.currentText():
+                case "==":
+                    if rowValue==value:
+                        filterData.append(row)
+                case ">":
+                    if rowValue > value:
+                        filterData.append(row)
+                case "<":
+                    if rowValue < value:
+                        filterData.append(row)
+                case ">=":
+                    if rowValue >= value:
+                        filterData.append(row)
+                case "<=":
+                    if rowValue <= value:
+                        filterData.append(row)
+                case "!=":
+                    if rowValue != value:
+                        filterData.append(row)
+        print(filterData)
+
 class Window(QMainWindow):
     def __init__(self):
+        super().__init__()
         def saveSpreadSheetData():
             keys = list(self.xlsxFile)
             values = list(self.xlsxFile.values())
             with pd.ExcelWriter(self.saveFileExplorer()) as writer:
                 for (key,value) in enumerate(values):
                     value.to_excel(writer,index=False,sheet_name=keys[key])
-        super().__init__()
         self.url = ""
         self.setWindowTitle("Excel")
         self.model = TableModel(self)
@@ -31,6 +91,7 @@ class Window(QMainWindow):
         fileMenu.addAction(saveButton)
 
         filterButton = self.menu.addAction("Filter")
+        filterButton.triggered.connect(self.openFilter)
         helpButton = self.menu.addAction("Help")
 
         self.spreadsheet = QTableView(self)
@@ -40,15 +101,14 @@ class Window(QMainWindow):
         widget.setLayout(layout)
         self.setCentralWidget(widget)
     def openFileExplorer(self):
-        fileExplorer = QFileDialog.getOpenFileName(self,"Open an Excel File","","","Excel files (*.xlsx)")
+        fileExplorer = QFileDialog.getOpenFileName(self,"Open an Excel File","","Excel files (*.xlsx)","Excel files (*.xlsx)")
         if fileExplorer[0].split(".")[1]=="xlsx":
             self.url = fileExplorer[0]
             self.xlsxFile = pd.read_excel(self.url,sheet_name=None)
             defaultFile = list(self.xlsxFile.values())[0]
+            self.sheetID = 0
             self.setWindowTitle(f"{self.url.split("/")[-1]}")
             self.columns = {}
-            for (i,column) in enumerate(list(defaultFile.columns.values)):
-                self.columns.update({i:column})
             self.sheetsMenu.clear()
             if len(self.xlsxFile.keys())>1:
                 self.setWindowTitle(f"{self.url.split("/")[-1]} : {list(self.xlsxFile.keys())[0]}")
@@ -62,7 +122,9 @@ class Window(QMainWindow):
             message.setText("Nieprawidłowy rodzaj pliku")
             message.show()
     def openSheet(self,sheetID):
+        self.sheetID = sheetID
         file = list(self.xlsxFile.values())[sheetID]
+        self.setWindowTitle(f"{self.url.split("/")[-1]} : {list(self.xlsxFile.keys())[sheetID]}")
         for (i, column) in enumerate(list(file.columns.values)):
             self.columns = {}
             self.columns.update({i: column})
@@ -70,11 +132,14 @@ class Window(QMainWindow):
         self.spreadsheet.setModel(self.model)
 
     def saveFileExplorer(self):
-        fileExplorer = QFileDialog.getSaveFileName(self,"Save Excel file","","","Excel files (*.xlsx)")
+        fileExplorer = QFileDialog.getSaveFileName(self,"Save Excel file","","Excel files (*.xlsx)","Excel files (*.xlsx)")
         if fileExplorer[0][-5:len(fileExplorer[0])]==".xlsx":
             return fileExplorer[0]
         else:
             return fileExplorer[0] + ".xlsx"
+    def openFilter(self):
+        self.filterWindow = FilterWindow(self.xlsxFile,self.sheetID)
+        self.filterWindow.show()
 class TableModel(QAbstractTableModel):
     def __init__(self, data):
         super().__init__()
