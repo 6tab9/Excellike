@@ -91,7 +91,11 @@ class Window(QMainWindow):
         fileMenu.addAction(saveButton)
 
         filterButton = self.menu.addAction("Filter")
+<<<<<<< Updated upstream
         filterButton.triggered.connect(self.openFilter)
+=======
+
+>>>>>>> Stashed changes
         helpButton = self.menu.addAction("Help")
 
         self.spreadsheet = QTableView(self)
@@ -137,9 +141,13 @@ class Window(QMainWindow):
             return fileExplorer[0]
         else:
             return fileExplorer[0] + ".xlsx"
+<<<<<<< Updated upstream
     def openFilter(self):
         self.filterWindow = FilterWindow(self.xlsxFile,self.sheetID)
         self.filterWindow.show()
+=======
+
+>>>>>>> Stashed changes
 class TableModel(QAbstractTableModel):
     def __init__(self, data):
         super().__init__()
