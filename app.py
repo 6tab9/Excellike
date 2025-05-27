@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QToolBar, QMainWindow, QComboBox, QTableView, QLabel, \
     QFileDialog, QPushButton, QMessageBox, QLineEdit
-from PySide6.QtGui import QAction, QIcon, QPixmap, QImage
+from PySide6.QtGui import QAction
 from PySide6.QtCore import QAbstractTableModel, Qt
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -179,9 +179,6 @@ class Window(QMainWindow):
     def openFilter(self):
         self.filterWindow = FilterWindow(self.xlsxFile,self.sheetID)
         self.filterWindow.show()
-    def openChart(self):
-        self.chartWindow = ChartWindow(self.xlsxFile,self.sheetID)
-        self.chartWindow.show()
 class TableModel(QAbstractTableModel):
     def __init__(self, data):
         super().__init__()
