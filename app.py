@@ -1,9 +1,46 @@
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QToolBar, QMainWindow, QComboBox, QTableView, QLabel, \
     QFileDialog, QPushButton, QMessageBox, QLineEdit
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QIcon, QPixmap, QImage
 from PySide6.QtCore import QAbstractTableModel, Qt
 import pandas as pd
+import matplotlib.pyplot as plt
 import sys
+
+class ChartWindow(QWidget):
+    def __init__(self,xlsxFile,sheetID):
+        super().__init__()
+        self.keys = []
+        self.setWindowTitle("Chart Window")
+        self.setGeometry(300, 300, 400, 300)
+        self.curSheet=list(xlsxFile.values())[sheetID]
+        for column in list(self.curSheet.columns.values):
+            self.keys.append(column)
+        self.layout=QVBoxLayout()
+        self.layout.addWidget(QLabel("Kolumny"))
+        self.columnCombo=QComboBox()
+        self.columnCombo.addItems(self.keys)
+        self.layout.addWidget(self.columnCombo)
+        self.layout.addWidget(QLabel("Wartości"))
+        self.valueCombo=QComboBox()
+        self.valueCombo.addItems(self.keys)
+        self.layout.addWidget(self.valueCombo)
+        self.chartButton=QPushButton("Create Chart")
+        self.chartButton.clicked.connect(self.createChart)
+        self.layout.addWidget(self.chartButton)
+        self.imageLabel=QLabel("This will be your chart image")
+        self.layout.addWidget(self.imageLabel)
+        self.setLayout(self.layout)
+    def createChart(self):
+        self.columns = []
+        self.values = []
+        for row in self.curSheet.values:
+            self.columns.append(row[self.columnCombo.currentIndex()])
+            self.values.append(row[self.valueCombo.currentIndex()])
+        print(self.columns,self.values)
+        self.barChart = plt.bar(self.columns,self.values)
+        self.barChart.set_label(self.columnCombo.currentText())
+        self.im = QImage(self.barChart)
+        self.imageLabel.setPixmap(QPixmap(self.barChart))
 
 class FilterWindow(QWidget):
     def __init__(self, xlsxFile,sheetID):
@@ -92,6 +129,8 @@ class Window(QMainWindow):
 
         filterButton = self.menu.addAction("Filter")
         filterButton.triggered.connect(self.openFilter)
+        chartButton = self.menu.addAction("Chart")
+        chartButton.triggered.connect(self.openChart)
         helpButton = self.menu.addAction("Help")
 
         self.spreadsheet = QTableView(self)
@@ -140,6 +179,9 @@ class Window(QMainWindow):
     def openFilter(self):
         self.filterWindow = FilterWindow(self.xlsxFile,self.sheetID)
         self.filterWindow.show()
+    def openChart(self):
+        self.chartWindow = ChartWindow(self.xlsxFile,self.sheetID)
+        self.chartWindow.show()
 class TableModel(QAbstractTableModel):
     def __init__(self, data):
         super().__init__()
